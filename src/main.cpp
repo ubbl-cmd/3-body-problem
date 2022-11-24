@@ -100,6 +100,18 @@ double calculate_barycenter_speed(int size, double *x, double *mass) {
 	return veclen(barycenter_speed);
 }
 
+double *calculate_barycenter_speed3(int size, double *x, double *mass) {
+	double *barycenter_speed = new double[3] {0,0,0};
+	double mass_sum = 0;
+	for (int i = 0; i < size / 6; i++) {
+		mass_sum += mass[i];
+	}
+	for (int i = 0; i < size / 2; i++) {
+		barycenter_speed[i % 3] += x[i + size / 2] * mass[i/3] / mass_sum;
+	}
+	return barycenter_speed;
+}
+
 void print_barycenter_speed(double t, int size, double *x, double *mass) {
 	open_ofs("barycenter_speed");
 	ofs << t << " ";
@@ -108,7 +120,67 @@ void print_barycenter_speed(double t, int size, double *x, double *mass) {
 	ofs << std::endl;
 }
 
+double calculate_kinetic_energy(int size, double *x, double *mass) {
+	double kinetic_energy = 0;
+	double * r = new double[3];
+	double * bars = calculate_barycenter_speed3(size, x, mass);
+	for (int i = 0; i < size / 6; i++) {
+		r[0] = x[size / 2 + i * 3 + 0] + bars[0];
+		r[1] = x[size / 2 + i * 3 + 1] + bars[1];
+		r[2] = x[size / 2 + i * 3 + 2] + bars[2];
+		double rlen = veclen(r);
+		kinetic_energy += mass[i] * rlen * rlen / 2;
+	}
+	delete[] r;
+	return kinetic_energy;
+}
 
+void print_kinetic_energy(double t, int size, double *x, double *mass) {
+	open_ofs("kinetic_energy");
+	ofs << t << " ";
+	double kinetic_energy = calculate_kinetic_energy(size, x, mass);
+	ofs << kinetic_energy << " ";
+	ofs << std::endl;
+}
+
+double calculate_potential_energy(int size, double *x, double *mass) {
+	const double G = 6.67430e-20;
+	double potential_energy = 0;
+	double * r = new double[3];
+	double * bar = calculate_barycenter_coorinates(size, x, mass);
+	double mass_sum = 0;
+	for (int i = 0; i < size / 6; i++) {
+		mass_sum += mass[i];
+	}
+	for (int i = 0; i < size / 6; i++) {
+		r[0] = (x[i * 3 + 0] - bar[0]);
+		r[1] = (x[i * 3 + 1] - bar[1]);
+		r[2] = (x[i * 3 + 2] - bar[2]);
+		double rlen = veclen(r);
+		potential_energy -= G * (mass_sum - mass[i]) * mass[i] / rlen;
+	}
+	delete[] r;
+	delete[] bar;
+	return potential_energy;
+}
+
+void print_potential_energy(double t, int size, double *x, double *mass) {
+	open_ofs("potential_energy");
+	ofs << t << " ";
+	double potential_energy = calculate_potential_energy(size, x, mass);
+	ofs << potential_energy << " ";
+	ofs << std::endl;
+}
+
+void print_energy(double t, int size, double *x, double *mass) {
+	open_ofs("energy");
+	ofs << t << " ";
+	double kinetic_energy = calculate_kinetic_energy(size, x, mass);
+	double potential_energy = calculate_potential_energy(size, x, mass);
+	ofs << kinetic_energy << " ";
+	ofs << potential_energy << " ";
+	ofs << std::endl;
+}
 
 void process_rk4(int size, double *x, double *mass, double h, double T, std::function<void(double, int, double*, double*)> every_step_function) {
 	int a_size = 4;
@@ -279,6 +351,10 @@ int main() {
 	double h = 100.0;
 	double T = 31536000.;
 
+	// double *bars = calculate_barycenter_speed3(n*6,x,mass);
+	// for (int i = 0; i < n*3; i++){
+	// 	x[n*3 + i] -= bars[i%3];
+	// }
 
 
 
@@ -291,12 +367,12 @@ int main() {
 	// process_adams8(n * 6, x, mass, h, T, &print_trajectory);
 
 
-
 	/* BARYCENTER COORDINATES AND TRAJECTORY */
 
 	// process_rk4(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
 	// process_dorpri8(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
 	// process_adams8(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
+
 
 	/* BARYCENTER SPEED */
 
@@ -305,8 +381,25 @@ int main() {
 	// process_adams8(n * 6, x, mass, h, T, &print_barycenter_speed);
 
 
+	/* KINETIC ENERGY */
+
+	// process_rk4(n * 6, x, mass, h, T, &print_kinetic_energy);
+	// process_dorpri8(n * 6, x, mass, h, T, &print_kinetic_energy);
+	// process_adams8(n * 6, x, mass, h, T, &print_kinetic_energy);
 
 
+	/* POTENTIAL ENERGY */
+
+	// process_rk4(n * 6, x, mass, h, T, &print_potential_energy);
+	// process_dorpri8(n * 6, x, mass, h, T, &print_potential_energy);
+	// process_adams8(n * 6, x, mass, h, T, &print_potential_energy);
+
+
+	/* ENERGY */
+
+	process_rk4(n * 6, x, mass, h, T, &print_energy);
+	// process_dorpri8(n * 6, x, mass, h, T, &print_energy);
+	// process_adams8(n * 6, x, mass, h, T, &print_energy);
 
 
 	if (ofs.is_open()) {
