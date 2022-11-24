@@ -1,5 +1,4 @@
 #include "explicit_adams.hpp"
-#include <iostream>
 
 void explicit_adams::razgonka(double h, explicit_rk *rk, int size, double *x, std::function<double*(int, double*, void*)> f, void *data) {
 	adams_dx = new double[a_size * size];

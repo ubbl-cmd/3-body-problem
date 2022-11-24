@@ -1,7 +1,9 @@
-#include <iostream>
-#include <cmath>
 #include "methods/explicit_rk.hpp"
 #include "methods/explicit_adams.hpp"
+
+#include <iostream>
+#include <fstream>
+#include <cmath>
 
 double veclen(double * v) {
 	double res = 0;
@@ -37,7 +39,78 @@ double * f(int n, double *x, void *data) {
 	delete[] r;
 	return res;
 }
-void process_rk4(int size, double *x, double *mass, double h, double T) {
+
+const int DO_EVERY_N_STEPS = 500;
+
+std::ofstream ofs;
+
+void open_ofs(std::string filename) {
+	if (!ofs.is_open()) {
+		ofs.open(filename, std::ios::binary);
+		if (!ofs.is_open()) {
+			std::cout << "Error opening file \"" << filename << "\"!" << std::endl;
+		}
+	}
+}
+
+void print_trajectory(double t, int size, double *x, double *mass) {
+	open_ofs("trajectory");
+	ofs << t << " ";
+	for (int i = 0; i < size / 2; i++) {
+		ofs << x[i] << " ";
+	}
+	ofs << std::endl;
+}
+
+double *calculate_barycenter_coorinates(int size, double *x, double *mass) {
+	double *barycenter_coorinates = new double[3] {0,0,0};
+	double mass_sum = 0;
+	for (int i = 0; i < size / 6; i++) {
+		mass_sum += mass[i];
+	}
+	for (int i = 0; i < size / 2; i++) {
+		barycenter_coorinates[i % 3] += x[i] * mass[i/3] / mass_sum;
+	}
+	return barycenter_coorinates;
+}
+
+void print_barycenter_coorinates_and_trajectory(double t, int size, double *x, double *mass) {
+	open_ofs("barycenter_coorinates");
+	ofs << t << " ";
+	for (int i = 0; i < size / 2; i++) {
+		ofs << x[i] << " ";
+	}
+	double * barycenter_coorinates = calculate_barycenter_coorinates(size, x, mass);
+	for (int j = 0; j < 3; j++) {
+		ofs << barycenter_coorinates[j] << " ";
+	}
+	delete[] barycenter_coorinates;
+	ofs << std::endl;
+}
+
+double calculate_barycenter_speed(int size, double *x, double *mass) {
+	double *barycenter_speed = new double[3] {0,0,0};
+	double mass_sum = 0;
+	for (int i = 0; i < size / 6; i++) {
+		mass_sum += mass[i];
+	}
+	for (int i = 0; i < size / 2; i++) {
+		barycenter_speed[i % 3] += x[i + size / 2] * mass[i/3] / mass_sum;
+	}
+	return veclen(barycenter_speed);
+}
+
+void print_barycenter_speed(double t, int size, double *x, double *mass) {
+	open_ofs("barycenter_speed");
+	ofs << t << " ";
+	double barycenter_speed = calculate_barycenter_speed(size, x, mass);
+	ofs << barycenter_speed << " ";
+	ofs << std::endl;
+}
+
+
+
+void process_rk4(int size, double *x, double *mass, double h, double T, std::function<void(double, int, double*, double*)> every_step_function) {
 	int a_size = 4;
 	double *a_rk4 = new double[a_size * a_size] {
 		0.,  0,   0, 0,
@@ -56,12 +129,8 @@ void process_rk4(int size, double *x, double *mass, double h, double T) {
 	double t = 0;
 	int step = 0;
 	while (t <= T) {
-		if (step % 500 == 0) {
-			std::cout << t << " ";
-			for (int i = 0; i < size / 2; i++) {
-				std::cout << x[i] << " ";
-			}
-			std::cout << std::endl;
+		if (step % DO_EVERY_N_STEPS == 0) {
+			every_step_function(t, size, x, mass);
 		}
 		rk4.rk_step(h, size, x, &f, (void *) mass);
 
@@ -74,7 +143,7 @@ void process_rk4(int size, double *x, double *mass, double h, double T) {
 }
 
 
-void process_dorpri8(int size, double *x, double *mass, double h, double T) {
+void process_dorpri8(int size, double *x, double *mass, double h, double T, std::function<void(double, int, double*, double*)> every_step_function) {
 	int dorpi8_size = 13;
 	double *a_dorpri8 = new double[dorpi8_size * dorpi8_size] {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -113,12 +182,8 @@ void process_dorpri8(int size, double *x, double *mass, double h, double T) {
 	double t = 0;
 	int step = 0;
 	while (t <= T) {
-		if (step % 500 == 0) {
-			std::cout << t << " ";
-			for (int i = 0; i < size / 2; i++) {
-				std::cout << x[i] << " ";
-			}
-			std::cout << std::endl;
+		if (step % DO_EVERY_N_STEPS == 0) {
+			every_step_function(t, size, x, mass);
 		}
 		dorpri8->rk_step(h, size, x, &f, (void *) mass);
 
@@ -129,7 +194,7 @@ void process_dorpri8(int size, double *x, double *mass, double h, double T) {
 	delete dorpri8;
 }
 
-void process_adams8(int size, double *x, double *mass, double h, double T) {
+void process_adams8(int size, double *x, double *mass, double h, double T, std::function<void(double, int, double*, double*)> every_step_function) {
 	int dorpi8_size = 13;
 	double *a_dorpri8 = new double[dorpi8_size * dorpi8_size] {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -170,17 +235,13 @@ void process_adams8(int size, double *x, double *mass, double h, double T) {
 	};
 	explicit_adams *adams8 = new explicit_adams(a_size, adams_a);
 
-
-	adams8->razgonka(h, dorpri8, size, x, f, mass);
-	double t = 0;//h*7
+	double t = h*7;
 	int step = 0;
+	every_step_function(t, size, x, mass);
+	adams8->razgonka(h, dorpri8, size, x, f, mass);
 	while (t <= T) {
-		if (step % 500 == 0) {
-			std::cout << t << " ";
-			for (int i = 0; i < size / 2; i++) {
-				std::cout << x[i] << " ";
-			}
-			std::cout << std::endl;
+		if (step % DO_EVERY_N_STEPS == 0) {
+			every_step_function(t, size, x, mass);
 		}
 		adams8->adams_step(h, size, x, &f, (void *) mass);
 
@@ -215,13 +276,42 @@ int main() {
 		7.349e22,
 		1.98847e30
 	};
-	double h = 50.0;
-	double T = 31536000. / 4;
+	double h = 100.0;
+	double T = 31536000. * 10;
 
-	// process_rk4(n * 6, x, mass, h, T);
-	// process_dorpri8(n * 6, x, mass, h, T);
-	process_adams8(n * 6, x, mass, h, T);
 
+
+
+
+
+	/* TRAJECTORY */
+
+	// process_rk4(n * 6, x, mass, h, T, &print_trajectory);
+	// process_dorpri8(n * 6, x, mass, h, T, &print_trajectory);
+	// process_adams8(n * 6, x, mass, h, T, &print_trajectory);
+
+
+
+	/* BARYCENTER COORDINATES AND TRAJECTORY */
+
+	// process_rk4(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
+	// process_dorpri8(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
+	// process_adams8(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
+
+	/* BARYCENTER SPEED */
+
+	// process_rk4(n * 6, x, mass, h, T, &print_barycenter_speed);
+	// process_dorpri8(n * 6, x, mass, h, T, &print_barycenter_speed);
+	// process_adams8(n * 6, x, mass, h, T, &print_barycenter_speed);
+
+
+
+
+
+
+	if (ofs.is_open()) {
+		ofs.close();
+	}
 	delete[] x;
 	delete[] mass;
 	return 0;
