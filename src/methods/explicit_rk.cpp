@@ -1,10 +1,10 @@
 #include "explicit_rk.hpp"
 
-void explicit_rk::rk_step(double h, int size, double *x, std::function<double*(int, double*, void*)> f, void * data) {
-	double *k     = new double[size * a_size];
-	double *local = new double[size];
+void explicit_rk::rk_step(long double h, int size, long double *x, std::function<long double*(int, long double*, void*)> f, void * data) {
+	long double *k     = new long double[size * a_size];
+	long double *local = new long double[size];
 
-	double *dx;
+	long double *dx;
 
 	for (int ki = 0; ki < a_size; ki++) {
 		for (int i = 0; i < size; i++) {
