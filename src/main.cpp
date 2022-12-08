@@ -5,6 +5,14 @@
 #include <fstream>
 #include <cmath>
 
+long double* vmv(long double* a, long double* b) {
+	long double* res = new long double[3];
+	res[0] = a[1] * b[2] - a[2] * b[1];
+	res[1] = a[2] * b[0] - a[0] * b[2];
+	res[2] = a[0] * b[1] - a[1] * b[0];
+	return res;
+}
+
 long double veclen(long double * v) {
 	long double res = 0;
 	for (int i = 0; i < 3; i++) {
@@ -116,14 +124,6 @@ long double calculate_kinetic_energy(int size, long double *x, long double *mass
 	long double kinetic_energy = 0;
 	long double * r = new long double[3];
 	for (int i = 0; i < size / 6; i++) {
-		/*for (int j = i+1; j < size / 6; j++) {
-			if (i == j) continue;
-			r[0] = x[i*3+0] - x[j*3+0];
-			r[1] = x[i*3+1] - x[j*3+1];
-			r[2] = x[i*3+2] - x[j*3+2];
-			long double Rlen = powl(r[0] * r[0] + r[1] * r[1] + r[2] * r[2], 0.5);
-			kinetic_energy -= G * mass[i] * mass[j] / Rlen;
-		}*/
 		r[0] = x[size / 2 + i * 3 + 0] * x[size / 2 + i * 3 + 0];
 		r[1] = x[size / 2 + i * 3 + 1] * x[size / 2 + i * 3 + 1];
 		r[2] = x[size / 2 + i * 3 + 2] * x[size / 2 + i * 3 + 2];
@@ -143,7 +143,6 @@ void print_kinetic_energy(long double t, int size, long double *x, long double *
 }
 
 long double calculate_potential_energy(int size, long double *x, long double *mass) {
-
 	const long double G = 6.67430e-20;
 	long double potential_energy = 0;
 	long double * r = new long double[3];
@@ -158,24 +157,6 @@ long double calculate_potential_energy(int size, long double *x, long double *ma
 		}
 	}
 	delete[] r;
-	// long double potential_energy = 0;
-	// long double * r = new long double[3];
-	// long double mass_sum = 0;
-	// for (int i = 0; i < size / 6; i++) {
-	// 	mass_sum += mass[i];
-	// }
- //
-	// long double *bars = calculate_barycenter_speed3(size,x,mass);
- //
-	// for (int i = 0; i < size / 6; i++) {
-	// 	r[0] = bars[0] - (x[i * 3 + 0]);
-	// 	r[1] = bars[1] - (x[i * 3 + 1]);
-	// 	r[2] = bars[2] - (x[i * 3 + 2]);
-	// 	long double rlen = veclen(r);
-	// 	potential_energy -= G * (mass_sum) * mass[i] / rlen;
-	// }
-	// delete[] r;
-
 	return potential_energy;
 }
 
@@ -199,26 +180,43 @@ void print_energy(long double t, int size, long double *x, long double *mass) {
 	ofs << std::endl;
 }
 
-long double *calculate_impulse(int size, long double *x, long double *mass) {
-	long double * r = new long double[3]{0,0,0};
+long double *calculate_angular_momentum(int size, long double *x, long double *mass) {
+	long double *r = new long double[3];
+	long double *dist = new long double[3];
+	long double *angular_momentum = new long double[3] {0,0,0};
+
 	for (int i = 0; i < size / 6; i++) {
-		r[0] += x[size / 2 + i*3 + 0] * mass[i];
-		r[1] += x[size / 2 + i*3 + 1] * mass[i];
-		r[2] += x[size / 2 + i*3 + 2] * mass[i];
+		for (int j = 0; j < size / 6; j++) {
+			if (i == j) continue;
+			r[0] = x[size/2 + i*3+0] * mass[i];
+			r[1] = x[size/2 + i*3+1] * mass[i];
+			r[2] = x[size/2 + i*3+2] * mass[i];
+			dist[0] = -x[j*3+0] + x[i*3+0];
+			dist[1] = -x[j*3+1] + x[i*3+1];
+			dist[2] = -x[j*3+2] + x[i*3+2];
+			long double * tmp = vmv(r, dist);
+			for (int k = 0; k < 3; k++) {
+				angular_momentum[k] += tmp[k];
+			}
+			delete[] tmp;
+		}
 	}
-	return r;
+	delete[] r;
+	delete[] dist;
+	return angular_momentum;
 }
 
-
-void print_impulse(long double t, int size, long double *x, long double *mass) {
-	open_ofs("impulse");
+void print_angular_momentum(long double t, int size, long double *x, long double *mass) {
+	open_ofs("angular_momentum");
 	ofs << t << " ";
-	long double *impulse = calculate_impulse(size, x, mass);
+	long double *angular_momentum = calculate_angular_momentum(size, x, mass);
+	ofs << veclen(angular_momentum) << " ";
 	for (int i = 0; i < 3; i++) {
-		ofs << impulse[i] << " ";
+		ofs << angular_momentum[i] << " ";
 	}
 	ofs << std::endl;
 }
+
 
 void process_rk4(int size, long double *x, long double *mass, long double h, long double T, std::function<void(long double, int, long double*, long double*)> every_step_function) {
 	int a_size = 4;
@@ -399,7 +397,7 @@ int main() {
 
 	/* TRAJECTORY */
 
-	process_rk4(n * 6, x, mass, h, T, &print_trajectory);
+	// process_rk4(n * 6, x, mass, h, T, &print_trajectory);
 	// process_dorpri8(n * 6, x, mass, h, T, &print_trajectory);
 	// process_adams8(n * 6, x, mass, h, T, &print_trajectory);
 
@@ -438,11 +436,12 @@ int main() {
 	// process_dorpri8(n * 6, x, mass, h, T, &print_energy);
 	// process_adams8(n * 6, x, mass, h, T, &print_energy);
 
-	/* IMPULSE */
+	/* ANGULAR MOMENTUM */
 
-	//process_rk4(n * 6, x, mass, h, T, &print_impulse);
+	 process_rk4(n * 6, x, mass, h, T, &print_angular_momentum);
 	// process_dorpri8(n * 6, x, mass, h, T, &print_energy);
 	// process_adams8(n * 6, x, mass, h, T, &print_energy);
+
 
 
 	if (ofs.is_open()) {
