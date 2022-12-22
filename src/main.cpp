@@ -5,6 +5,22 @@
 #include <fstream>
 #include <cmath>
 
+long double pi = 2 * acos(0.0);
+struct keplerian {
+	long double a;
+	long double e;
+	long double w;
+	long double om;
+	long double incl;
+	long double M;
+};
+
+struct keplerian kepl;
+
+const int DO_EVERY_N_STEPS = 500;
+
+std::ofstream ofs;
+
 long double* vmv(long double* a, long double* b) {
 	long double* res = new long double[3];
 	res[0] = a[1] * b[2] - a[2] * b[1];
@@ -13,6 +29,7 @@ long double* vmv(long double* a, long double* b) {
 	return res;
 }
 
+
 long double veclen(long double * v) {
 	long double res = 0;
 	for (int i = 0; i < 3; i++) {
@@ -20,6 +37,7 @@ long double veclen(long double * v) {
 	}
 	return sqrt(res);
 }
+
 
 long double * f(int n, long double *x, void *data) {
 	const long double G = 6.67430e-20;
@@ -48,9 +66,37 @@ long double * f(int n, long double *x, void *data) {
 	return res;
 }
 
-const int DO_EVERY_N_STEPS = 500;
+long double * f_analit(int n, long double *x, void *data) {
+	const long double G = 6.67430e-20;
+	long double *mass = (long double *) data;
+	long double* res = new long double[n];
 
-std::ofstream ofs;
+	long double* r = new long double[3];
+	for (int i = 0; i < n / 2; i++) {
+		res[i] = x[i + n / 2];
+		res[i + n / 2] = 0;
+	}
+	for (int i = 0; i < n / 6 / 2; i++) {
+		for (int j = 0; j < n / 6; j++) {
+			if (j == i) {
+				continue;
+			}
+			for (int idx = 0; idx < 3; idx++) {
+				r[idx] = x[j * 3 + idx] - x[i * 3 + idx];
+			}
+			for (int idx = 0; idx < 3; idx++) {
+				res[3 * i + idx + n / 2] += r[idx] * (G * mass[j] / pow(veclen(r), 3));
+			}
+		}
+	}
+	for (int idx = 0; idx < 3; idx++) {
+		res[3 + idx] = 0;
+		res[6 + 3 + idx] = 0;
+	}
+	delete[] r;
+	return res;
+}
+
 
 void open_ofs(std::string filename) {
 	if (!ofs.is_open()) {
@@ -61,6 +107,7 @@ void open_ofs(std::string filename) {
 	}
 }
 
+
 void print_trajectory(long double t, int size, long double *x, long double *mass) {
 	open_ofs("trajectory");
 	ofs << t << " ";
@@ -69,6 +116,7 @@ void print_trajectory(long double t, int size, long double *x, long double *mass
 	}
 	ofs << std::endl;
 }
+
 
 long double *calculate_barycenter_coorinates(int size, long double *x, long double *mass) {
 	long double *barycenter_coorinates = new long double[3] {0,0,0};
@@ -120,6 +168,7 @@ void print_barycenter_speed(long double t, int size, long double *x, long double
 	ofs << std::endl;
 }
 
+
 long double calculate_kinetic_energy(int size, long double *x, long double *mass) {
 	long double kinetic_energy = 0;
 	long double * r = new long double[3];
@@ -167,8 +216,6 @@ void print_potential_energy(long double t, int size, long double *x, long double
 	ofs << potential_energy << " ";
 	ofs << std::endl;
 }
-
-
 void print_energy(long double t, int size, long double *x, long double *mass) {
 	open_ofs("energy");
 	ofs << t << " ";
@@ -179,6 +226,7 @@ void print_energy(long double t, int size, long double *x, long double *mass) {
 	ofs << kinetic_energy + potential_energy << " ";
 	ofs << std::endl;
 }
+
 
 long double *calculate_angular_momentum(int size, long double *x, long double *mass) {
 	long double *r = new long double[3];
@@ -218,7 +266,165 @@ void print_angular_momentum(long double t, int size, long double *x, long double
 }
 
 
-void process_rk4(int size, long double *x, long double *mass, long double h, long double T, std::function<void(long double, int, long double*, long double*)> every_step_function) {
+
+keplerian cartesian_to_kepler(long double *x, long double mu) {
+	long double *r = new long double[3]{x[0],x[1],x[2]};
+	long double *rdt = new long double[3]{x[3],x[4],x[5]};
+
+	long double *h = vmv(r,rdt);
+
+	long double *e = vmv(rdt, h);
+	for (int i = 0; i < 3; i++) {
+		e[i] /= mu;
+		e[i] -= r[i]/veclen(r);
+	}
+
+	long double *n = new long double[3]{-1*h[1],h[0],0};
+
+	long double v;
+	v = acos(
+		(e[0]*r[0]+e[1]*r[1]+e[2]*r[2]) /
+		veclen(e) / veclen(r)
+	);
+	if (r[0]*rdt[0]+r[1]*rdt[1]+r[2]*rdt[2] < 0) {
+		v = 2 * pi - v;
+	}
+
+	long double inclination = acos(
+		h[2] / veclen(h)
+	);
+
+	long double E = 2 * atan(
+		tanl(v / 2) /
+		sqrt(
+			(1+veclen(e)) / (1 - veclen(e))
+		)
+	);
+
+	long double sigma = acos(
+		n[0] / veclen(n)
+	);
+	if (n[1] < 0) {
+		sigma = 2 * pi - sigma;
+	}
+
+	long double omega = acos(
+		(n[0]*e[0]+n[1]*e[1]+n[2]*e[2]) / veclen(e) / veclen(n)
+	);
+
+	if (e[2] < 0) {
+		omega = 2 * pi - omega;
+	}
+
+	long double M = E - veclen(e) * sinl(E);
+
+	long double a = 1. / ((2./veclen(r)) - (veclen(rdt) * veclen(rdt)) / mu);
+	struct keplerian kepl;
+	kepl.a = a;
+	kepl.e = veclen(e);
+	kepl.w = omega;
+	kepl.om = sigma;
+    kepl.incl = inclination;
+	kepl.M = M;
+    delete[] e;
+    delete[] n;
+    delete[] h;
+	return kepl;
+}
+
+long double arctan2(long double y, long double x) {
+	if (x > 0) {
+		return atan(y/x);
+	} else if (y >= 0 && x < 0) {
+		return atan(y/x) + pi;
+	} else if (y < 0 && x < 0) {
+		return atan(y/x) - pi;
+	} else if (y > 0 && x == 0) {
+		return pi / 2;
+	} else if (y < 0 && x == 0) {
+		return -1 * pi / 2;
+	}
+	return 0;
+}
+long double t_counter = 0;
+long double E_t = 0;
+long double* kepler_to_cartesian(
+	long double a,
+	long double e,
+	long double w,
+	long double om,
+	long double incl,
+	long double M,
+	long double t,
+	long double mu) {
+		long double M_t = M + t * sqrt(mu / a / a / a);
+		while (M_t < 0) {
+			M_t += 2 * pi;
+		}
+		while (M_t >= 2 * pi) {
+			M_t -= 2 * pi;
+		}
+		if (t == 0)  {
+			E_t = M_t;
+		} else {
+			E_t += (t - t_counter) * sqrt(mu / a / a / a);
+			while (t_counter <= t) {
+				E_t = E_t - (E_t - e * sinl(E_t) - M_t) / (1 - e * cosl(E_t));
+				t_counter += 1;
+			}
+		}
+
+		long double v_t = 2 * arctan2(
+			sqrt(1+e)*sinl(E_t/2), sqrt(1-e)*cosl(E_t/2)
+		);
+
+		long double rc_t = a * (1 - e * cosl(E_t));
+
+		long double *o_t = new long double[3]{ cosl(v_t), sinl(v_t), 0.0 };
+		for (int k = 0; k < 3; k++) {
+			o_t[k] *= rc_t;
+		}
+
+		long double* x = new long double[3] {
+			o_t[0] * (cosl(w)*cosl(om)-sinl(w)*cosl(incl)*sinl(om)) - o_t[1] * (sinl(w)*cosl(om) + cosl(w)*cosl(incl)*sinl(om)),
+			o_t[0] * (cosl(w)*sinl(om)+sinl(w)*cosl(incl)*cosl(om)) + o_t[1] * (cosl(w)*cosl(incl)*cosl(om) - sinl(w)*sinl(om)),
+			o_t[0] * (sinl(w)*sin(incl))                            + o_t[1] * (cosl(w)*sinl(incl))
+		};
+		delete[] o_t;
+		return x;
+}
+
+void print_analitical_solution(long double t, int size, long double *x, long double *mass) {
+	long double *r = kepler_to_cartesian(
+		kepl.a,
+		kepl.e,
+		kepl.w,
+		kepl.om,
+		kepl.incl,
+		kepl.M,
+		t,
+		1.98847e30 * 6.67430e-20);
+	open_ofs("analit");
+	ofs << t << " ";
+	long double *diff = new long double[3] {
+		x[0]-r[0],
+		x[1]-r[1],
+		x[2]-r[2],
+	};
+	ofs << veclen(diff)/veclen(r);
+	delete[] diff;
+	// for (int i = 0; i < 3; i++) {
+	// 	ofs << x[i] << " ";
+	// }
+	// for (int i = 0; i < 3; i++) {
+	// 	ofs << r[i]<< " ";
+	// }
+	ofs << std::endl;
+	delete[] r;
+}
+
+
+void process_rk4(int size, long double *x, long double *mass, long double h, long double T, std::function<long double*(int, long double*, void*)> func, std::function<void(long double, int, long double*, long double*)> every_step_function) {
 	int a_size = 4;
 	long double *a_rk4 = new long double[a_size * a_size] {
 		0.,  0,   0, 0,
@@ -237,10 +443,10 @@ void process_rk4(int size, long double *x, long double *mass, long double h, lon
 	long double t = 0;
 	int step = 0;
 	while (t <= T) {
-		if (step % DO_EVERY_N_STEPS == 0) {
+		if (step % DO_EVERY_N_STEPS == 1) {
 			every_step_function(t, size, x, mass);
 		}
-		rk4.rk_step(h, size, x, &f, (void *) mass);
+		rk4.rk_step(h, size, x, func, (void *) mass);
 
 
 		step++;
@@ -251,7 +457,7 @@ void process_rk4(int size, long double *x, long double *mass, long double h, lon
 }
 
 
-void process_dorpri8(int size, long double *x, long double *mass, long double h, long double T, std::function<void(long double, int, long double*, long double*)> every_step_function) {
+void process_dorpri8(int size, long double *x, long double *mass, long double h, long double T, std::function<long double*(int, long double*, void*)> func, std::function<void(long double, int, long double*, long double*)> every_step_function) {
 	int dorpi8_size = 13;
 	long double *a_dorpri8 = new long double[dorpi8_size * dorpi8_size] {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -277,11 +483,11 @@ void process_dorpri8(int size, long double *x, long double *mass, long double h,
 		-1028468189./846180014, 0, 0, 8478235783./506512852, 1311729495./1432422823, -10304129995./1701304382, -48777925059./3047939560, 15336726248./1032824649, -45442868181./3398467696, 3065993473./597172653, 0, 0, 0,
 
 		185892177./718116043, 0, 0, -3185094517./667107341, -477755414./1098053517, -703635378./230739211, 5731566787./1027545527, 5232866602./850066563, -4093664535./808688257, 3962137247./1805957418, 65686385./487910083, 0, 0,
-		403863854./491063109, 0, 0, -5068492393./434740067, -411421997./543043805, 652783627./914296604, 11173962825./925320556, -13158990841./6184727034, 3936647629./1978049680, -160528059./685178525, 248638103./1413531060, 0, 0
+		14005451. / 335480064, 0, 0, 0, 0, -59238493. / 1068277825, 181606767. / 758867731, 561292985. / 797845732, -1041891430. / 1371343529, 760417239. / 1151165299, 118820643. / 751138087, -528747749. / 2220607170, 1. / 4,
 	};
 
 	long double *b_dorpri8 = new long double[dorpi8_size] {
-		14005451./335480064, 0, 0, 0, 0, -59238493./1068277825, 181606676./758867731, 561292985./797845732, -1041891430./1371343529, 760417239./1151165299, 118820643./751138087, -5228747749./2220607170, 1./4
+		14005451. / 335480064, 0, 0, 0, 0, -59238493. / 1068277825, 181606767. / 758867731, 561292985. / 797845732, -1041891430. / 1371343529, 760417239. / 1151165299, 118820643. / 751138087, -528747749. / 2220607170, 1. / 4
 	};
 
 	explicit_rk *dorpri8 = new explicit_rk(dorpi8_size, a_dorpri8, b_dorpri8);
@@ -290,10 +496,10 @@ void process_dorpri8(int size, long double *x, long double *mass, long double h,
 	long double t = 0;
 	int step = 0;
 	while (t <= T) {
-		if (step % DO_EVERY_N_STEPS == 0) {
+		if (step % DO_EVERY_N_STEPS == 1) {
 			every_step_function(t, size, x, mass);
 		}
-		dorpri8->rk_step(h, size, x, &f, (void *) mass);
+		dorpri8->rk_step(h, size, x, func, (void *) mass);
 
 
 		step++;
@@ -302,7 +508,7 @@ void process_dorpri8(int size, long double *x, long double *mass, long double h,
 	delete dorpri8;
 }
 
-void process_adams8(int size, long double *x, long double *mass, long double h, long double T, std::function<void(long double, int, long double*, long double*)> every_step_function) {
+void process_adams8(int size, long double *x, long double *mass, long double h, long double T, std::function<long double*(int, long double*, void*)> func, std::function<void(long double, int, long double*, long double*)> every_step_function) {
 	int dorpi8_size = 13;
 	long double *a_dorpri8 = new long double[dorpi8_size * dorpi8_size] {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -328,11 +534,11 @@ void process_adams8(int size, long double *x, long double *mass, long double h, 
 		-1028468189./846180014, 0, 0, 8478235783./506512852, 1311729495./1432422823, -10304129995./1701304382, -48777925059./3047939560, 15336726248./1032824649, -45442868181./3398467696, 3065993473./597172653, 0, 0, 0,
 
 		185892177./718116043, 0, 0, -3185094517./667107341, -477755414./1098053517, -703635378./230739211, 5731566787./1027545527, 5232866602./850066563, -4093664535./808688257, 3962137247./1805957418, 65686385./487910083, 0, 0,
-		403863854./491063109, 0, 0, -5068492393./434740067, -411421997./543043805, 652783627./914296604, 11173962825./925320556, -13158990841./6184727034, 3936647629./1978049680, -160528059./685178525, 248638103./1413531060, 0, 0
+		14005451. / 335480064, 0, 0, 0, 0, -59238493. / 1068277825, 181606767. / 758867731, 561292985. / 797845732, -1041891430. / 1371343529, 760417239. / 1151165299, 118820643. / 751138087, -528747749. / 2220607170, 1. / 4,
 	};
 
 	long double *b_dorpri8 = new long double[dorpi8_size] {
-		14005451./335480064, 0, 0, 0, 0, -59238493./1068277825, 181606676./758867731, 561292985./797845732, -1041891430./1371343529, 760417239./1151165299, 118820643./751138087, -5228747749./2220607170, 1./4
+		14005451. / 335480064, 0, 0, 0, 0, -59238493. / 1068277825, 181606767. / 758867731, 561292985. / 797845732, -1041891430. / 1371343529, 760417239. / 1151165299, 118820643. / 751138087, -528747749. / 2220607170, 1. / 4
 	};
 
 	explicit_rk *dorpri8 = new explicit_rk(dorpi8_size, a_dorpri8, b_dorpri8);
@@ -346,12 +552,12 @@ void process_adams8(int size, long double *x, long double *mass, long double h, 
 	long double t = h*7;
 	int step = 0;
 	every_step_function(t, size, x, mass);
-	adams8->razgonka(h, dorpri8, size, x, f, mass);
+	adams8->razgonka(h, dorpri8, size, x, func, mass);
 	while (t <= T) {
-		if (step % DO_EVERY_N_STEPS == 0) {
+		if (step % DO_EVERY_N_STEPS == 1) {
 			every_step_function(t, size, x, mass);
 		}
-		adams8->adams_step(h, size, x, &f, (void *) mass);
+		adams8->adams_step(h, size, x, func, (void *) mass);
 
 
 		step++;
@@ -360,88 +566,105 @@ void process_adams8(int size, long double *x, long double *mass, long double h, 
 }
 
 int main() {
-	int n = 3;
-	/*
-	 R[earth], R[moon], R[sun],
-	 V[earth], V[moon], V[sun]
-	 */
-	long double *x = new long double[6*n] {
-//		=========RADIUS VECTORS=========
+	ofs.setf(std::ios::fixed);  // вывод в фиксированном формате
+	ofs.precision(50);      // вывод до 6 знака после точки, включительно
+	int n;
+	long double *x;
+	long double *mass;
+
+	n=3;
+	x = new long double[6*n] {
+//		R[km/s]
 		 1.453004563709436E+08, 2.978607390059390E+07,  2.866143171530403E+04,
 		1.455259266863196E+08, 2.949542371875033E+07, -4.639949931440875E+03,
 		-1.359757021307868E+06, 1.333076360298289E+05,  3.057372007160987E+04,
-//		=========SPEED VECTORS=========
+//		dR/dt[km/s^2]
 		-6.397102954570147E+00,  2.906192414721306E+01, -1.203250030542335E-03,
 		-5.557389967864156E+00, 2.971153423303235E+01, -1.096802103212369E-02,
 		-2.335983427600637E-04, -1.571626050150792E-02,  1.314580230199784E-04
 	};
-	/*
-	 M[earth], M[moon], M[sun]
-	 */
-	long double *mass = new long double[n] {
+	mass = new long double[n] {
+//		[kg]
 		5.9722e24,
 		7.349e22,
 		1.98847e30,
 	};
-	long double h = 50.0;
+	long double h = 10.0;
 	long double T = 31536000.;
-
-	long double *bars = calculate_barycenter_speed3(n*6,x,mass);
-	for (int i = 0; i < n*3; i++){
-		x[n*3 + i] -= bars[i%3];
-	}
-
 
 
 
 
 	/* TRAJECTORY */
 
-	// process_rk4(n * 6, x, mass, h, T, &print_trajectory);
-	// process_dorpri8(n * 6, x, mass, h, T, &print_trajectory);
-	// process_adams8(n * 6, x, mass, h, T, &print_trajectory);
+	process_rk4(n * 6, x, mass, h, T, f, &print_trajectory);
+	// process_dorpri8(n * 6, x, mass, h, T, f, &print_trajectory);
+	// process_adams8(n * 6, x, mass, h, T, f, &print_trajectory);
 
 
 	/* BARYCENTER COORDINATES AND TRAJECTORY */
 
-	// process_rk4(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
-	// process_dorpri8(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
-	// process_adams8(n * 6, x, mass, h, T, &print_barycenter_coorinates_and_trajectory);
+	// process_rk4(n * 6, x, mass, h, T, f, &print_barycenter_coorinates_and_trajectory);
+	// process_dorpri8(n * 6, x, mass, h, T, f, &print_barycenter_coorinates_and_trajectory);
+	// process_adams8(n * 6, x, mass, h, T, f, &print_barycenter_coorinates_and_trajectory);
 
 
 	/* BARYCENTER SPEED */
 
-	// process_rk4(n * 6, x, mass, h, T, &print_barycenter_speed);
-	// process_dorpri8(n * 6, x, mass, h, T, &print_barycenter_speed);
-	// process_adams8(n * 6, x, mass, h, T, &print_barycenter_speed);
+	// process_rk4(n * 6, x, mass, h, T, f, &print_barycenter_speed);
+	// process_dorpri8(n * 6, x, mass, h, T, f, &print_barycenter_speed);
+	// process_adams8(n * 6, x, mass, h, T, f, &print_barycenter_speed);
 
 
 	/* KINETIC ENERGY */
 
-	// process_rk4(n * 6, x, mass, h, T, &print_kinetic_energy);
-	// process_dorpri8(n * 6, x, mass, h, T, &print_kinetic_energy);
-	// process_adams8(n * 6, x, mass, h, T, &print_kinetic_energy);
+	// process_rk4(n * 6, x, mass, h, T, f, &print_kinetic_energy);
+	// process_dorpri8(n * 6, x, mass, h, T, f, &print_kinetic_energy);
+	// process_adams8(n * 6, x, mass, h, T, f, &print_kinetic_energy);
 
 
 	/* POTENTIAL ENERGY */
 
-	// process_rk4(n * 6, x, mass, h, T, &print_potential_energy);
-	// process_dorpri8(n * 6, x, mass, h, T, &print_potential_energy);
-	// process_adams8(n * 6, x, mass, h, T, &print_potential_energy);
+	// process_rk4(n * 6, x, mass, h, T, f, &print_potential_energy);
+	// process_dorpri8(n * 6, x, mass, h, T, f, &print_potential_energy);
+	// process_adams8(n * 6, x, mass, h, T, f, &print_potential_energy);
 
 
 	/* ENERGY */
 
-	// process_rk4(n * 6, x, mass, h, T, &print_energy);
-	// process_dorpri8(n * 6, x, mass, h, T, &print_energy);
-	// process_adams8(n * 6, x, mass, h, T, &print_energy);
+	// process_rk4(n * 6, x, mass, h, T, f, &print_energy);
+	// process_dorpri8(n * 6, x, mass, h, T, f, &print_energy);
+	// process_adams8(n * 6, x, mass, h, T, f, &print_energy);
 
 	/* ANGULAR MOMENTUM */
 
-	 process_rk4(n * 6, x, mass, h, T, &print_angular_momentum);
-	// process_dorpri8(n * 6, x, mass, h, T, &print_energy);
-	// process_adams8(n * 6, x, mass, h, T, &print_energy);
+	 // process_rk4(n * 6, x, mass, h, T, f, &print_angular_momentum);
+	// process_dorpri8(n * 6, x, mass, h, T, f, &print_energy);
+	// process_adams8(n * 6, x, mass, h, T, f, &print_energy);
 
+	/*ANALITICAL*/
+
+	// n = 2;
+	// x = new long double[6*n] {
+	// 	2.005683434185720E+07,  1.337069254521444E+08,  5.799434294798527E+07,
+	// 	0,0,0,
+	// 	-2.994817357192201E+01,  3.864228014740471E+00,  1.675675038999799E+00,
+	// 	0,0,0,
+	// };
+	// mass = new long double[n] {
+	// 	5.9722e24,
+	// 	1.98847e30,
+	// };
+	// long double *bars = calculate_barycenter_speed3(n*6,x,mass);
+	// for (int i = 0; i < n*3; i++){
+	// 	x[n*3 + i] -= bars[i%3];
+	// }
+	// long double *analit_x = new long double[6]{
+	// 	x[0],x[1],x[2],
+	// 	x[6],x[7],x[8]
+	// };
+	// kepl = cartesian_to_kepler(analit_x, 1.98847e30 * 6.67430e-20);
+	// process_rk4(n * 6, x, mass, h, T, f_analit, &print_analitical_solution);
 
 
 	if (ofs.is_open()) {
