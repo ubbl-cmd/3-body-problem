@@ -1,56 +1,60 @@
 # Plots [h = 10, prints every 500 steps]
 ## Trajectories
 ### RK4
-![image](https://user-images.githubusercontent.com/62518447/209028141-3b8c9a41-a52a-42f7-bc38-fcfe0ca20bf9.png)
+![image](https://user-images.githubusercontent.com/62518447/209951094-db8af3f5-0117-4ba5-9996-69f342a473b7.png)
 ### DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209028632-24f5911f-031c-43e4-90f2-b08adf443fb9.png)
+![image](https://user-images.githubusercontent.com/62518447/209951294-6112fc1a-9f88-4bc6-8bee-69634ab926ad.png)
 ### ADAMS8 + DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209028692-ec751f11-fa0c-472c-b004-4b552b4a17f9.png)
+![image](https://user-images.githubusercontent.com/62518447/209951363-48bf69af-8b8f-4992-9d7c-195bf30d66a4.png)
 
 
 ## BARYCENTER COORDINATES
 ### RK4
-![image](https://user-images.githubusercontent.com/62518447/209028782-cb0aca87-57fc-4072-8f1d-2b3a735b4bc4.png)
+![image](https://user-images.githubusercontent.com/62518447/209951499-e2d415d6-e27a-42a7-8b34-896c9b10af5c.png)
+![image](https://user-images.githubusercontent.com/62518447/209951531-6da31667-a757-4809-8c31-58162c9955be.png)
 ### DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209028969-15b984f4-7fab-4a7f-9d7b-4aa2c688e69d.png)
+![image](https://user-images.githubusercontent.com/62518447/209951809-78e98702-e932-47c4-a813-5acb0e5984f5.png)
+![image](https://user-images.githubusercontent.com/62518447/209951824-e2a803d0-7ec3-4ebe-bd21-81b969afc3ed.png)
 ### ADAMS8 + DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209029346-818828af-7705-41d6-bc21-7fe78f71ade7.png)
+![image](https://user-images.githubusercontent.com/62518447/209951893-e31c5026-43d7-42f7-b861-fe999bda0bc6.png)
+![image](https://user-images.githubusercontent.com/62518447/209951903-09fe571a-c13e-4025-843e-c81ce0b06579.png)
 
 
 ## BARYCENTER SPEED
 ### RK4
-![image](https://user-images.githubusercontent.com/62518447/209029479-be5b6bed-241d-4142-a03c-1946e6ef5b05.png)
+![image](https://user-images.githubusercontent.com/62518447/209952074-d7ece81f-ec24-4f69-adcc-00a715e45a3b.png)
 ### DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209030434-ca9f0484-2293-49d7-98f8-54ec6f567d23.png)
+![image](https://user-images.githubusercontent.com/62518447/209952365-12609586-8b30-4485-8594-a2b6b97cae76.png)
 ### ADAMS8 + DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209030557-cd2477bf-4995-4a7f-81f9-4cd85b10dd4d.png)
+![image](https://user-images.githubusercontent.com/62518447/209952426-2c211ffa-5bbd-49af-9e99-657b93c32ed5.png)
+
 
 
 ## ENERGY
 ### RK4
-![image](https://user-images.githubusercontent.com/62518447/209032151-3597accf-4123-4288-8cf2-6e0ab6b5974e.png)
-![image](https://user-images.githubusercontent.com/62518447/209032066-1c5b37a9-a267-472b-99e3-c78d5a9514f9.png)
+![image](https://user-images.githubusercontent.com/62518447/209952514-0df1445a-5165-4705-a811-ce632a293cfb.png)
+![image](https://user-images.githubusercontent.com/62518447/209952530-ff0fa33f-1441-4f44-af34-9a75f99a2f0f.png)
 ### DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209032451-99753f46-50ca-47e2-997c-842d2bfce49c.png)
-![image](https://user-images.githubusercontent.com/62518447/209032637-495a7b59-4d6b-4418-b223-5d989f0f7a51.png)
+![image](https://user-images.githubusercontent.com/62518447/209952912-4e21b6ad-ab66-4fce-86c6-f606226ac740.png)
+![image](https://user-images.githubusercontent.com/62518447/209952933-affb6e5b-ad24-4853-af1b-f8d5015d30d0.png)
 ### ADAMS8 + DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209032756-b70e4ab4-3087-461b-9698-b33ea001982b.png)
-![image](https://user-images.githubusercontent.com/62518447/209032727-d8bc1d69-acc9-4e7d-ac70-bf74d8ee88a3.png)
+![image](https://user-images.githubusercontent.com/62518447/209953010-ab0f509d-ee95-488d-a573-4bd05713b0df.png)
+![image](https://user-images.githubusercontent.com/62518447/209953053-07abe2e5-4638-430a-be1c-cb6f302969a6.png)
 
 
 ## ANGULAR MOMENTUM
 ### RK4
-![image](https://user-images.githubusercontent.com/62518447/209032991-ac5e76bc-1a07-4547-adf4-5c732548fb36.png)
+![image](https://user-images.githubusercontent.com/62518447/209953465-6f5987ac-3e97-4add-9c8e-05a43718fb8b.png)
 ### DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209033661-c5804cfc-c730-48c8-a4e9-0772f6366f6c.png)
+![image](https://user-images.githubusercontent.com/62518447/209953701-2a679e3d-e9cb-40f9-92b8-9333b80ad59b.png)
 ### ADAMS8 + DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209033360-13b17dfe-292d-4657-823f-5e7e220d8d17.png)
+![image](https://user-images.githubusercontent.com/62518447/209953808-ca3a84f4-01b5-4e65-8d1f-bea2f22ac55c.png)
 
 
 ## ANALITICAL SOLUTION DIFFERENCE
 ### RK4
-![image](https://user-images.githubusercontent.com/62518447/209033785-654ba897-2139-402c-8648-dc6b87ec2c05.png)
+![image](https://user-images.githubusercontent.com/62518447/209953963-ba3b0e93-10eb-4daf-bfc6-db10ae22dc3d.png)
 ### DORPRI8
-![image](https://user-images.githubusercontent.com/62518447/209034124-40eae255-20b5-4efa-856b-40745d1fcbdb.png)
+![image](https://user-images.githubusercontent.com/62518447/209954172-46ef7530-70de-4c20-b92e-e6b015dc56d8.png)
 ### ADAMS8
-![image](https://user-images.githubusercontent.com/62518447/209034297-9666c3b4-ac5e-4d72-956c-cd3344637ad3.png)
+![image](https://user-images.githubusercontent.com/62518447/209954233-3880d779-f072-4298-8525-f2baf652979c.png)
