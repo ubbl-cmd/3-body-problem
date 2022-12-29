@@ -5,7 +5,6 @@ void explicit_adams::razgonka(long double h, explicit_rk *rk, int size, long dou
 	long double *local = new long double[size];
 	long double *dx;
 	for (int i = 0; i < a_size; i++) {
-		rk->rk_step(h, size, x, f, data);
 		for (int idx = 0; idx < size; idx++) {
 			local[idx] = x[idx];
 		}
@@ -14,6 +13,7 @@ void explicit_adams::razgonka(long double h, explicit_rk *rk, int size, long dou
 			adams_dx[i * size + idx] = dx[idx];
 		}
 		delete[] dx;
+		rk->rk_step(h, size, x, f, data);
 	}
 	delete[] local;
 }
